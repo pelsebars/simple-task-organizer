@@ -41,6 +41,7 @@ model Goal {
   id           String   @id @default(cuid())
   ownerId      String
   title        String
+  context      String   @default("")
   stakeholders String   @default("")
   sortOrder    Int
   createdAt    DateTime @default(now())

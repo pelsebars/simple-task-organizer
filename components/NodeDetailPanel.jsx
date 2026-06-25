@@ -80,15 +80,26 @@ export function NodeDetailPanel({
           </div>
 
           {selectedNode.kind === "goal" ? (
-            <div>
-              <label htmlFor="stakeholders">Stakeholders</label>
-              <textarea
-                id="stakeholders"
-                rows={7}
-                value={selectedGoal?.stakeholders ?? ""}
-                onChange={(event) => onUpdateGoal({ stakeholders: event.target.value })}
-              />
-            </div>
+            <>
+              <div>
+                <label htmlFor="goalContext">Project context</label>
+                <textarea
+                  id="goalContext"
+                  rows={7}
+                  value={selectedGoal?.context ?? ""}
+                  onChange={(event) => onUpdateGoal({ context: event.target.value })}
+                />
+              </div>
+              <div>
+                <label htmlFor="stakeholders">Stakeholders</label>
+                <textarea
+                  id="stakeholders"
+                  rows={7}
+                  value={selectedGoal?.stakeholders ?? ""}
+                  onChange={(event) => onUpdateGoal({ stakeholders: event.target.value })}
+                />
+              </div>
+            </>
           ) : null}
 
           <div className="button-row">

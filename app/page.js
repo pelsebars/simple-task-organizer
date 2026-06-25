@@ -126,7 +126,7 @@ export default function Home() {
     patchState((draft) => {
       const id = fallbackId();
       const publicId = draft.goals.length + 1;
-      draft.goals.push({ id, rootNodeId: id, title, stakeholders: "" });
+      draft.goals.push({ id, rootNodeId: id, title, context: "", stakeholders: "" });
       draft.nodes.push(makeNode(id, publicId, null, title, "not_started", "", "", publicId, id, "goal"));
       draft.currentGoalId = id;
       draft.selectedNodeId = id;
