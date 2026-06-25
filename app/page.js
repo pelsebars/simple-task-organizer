@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ConfirmModal } from "../components/ConfirmModal";
 import { CreateGoalModal } from "../components/CreateGoalModal";
 import { GoalSidebar } from "../components/GoalSidebar";
 import { GraphCanvas } from "../components/GraphCanvas";
@@ -40,6 +41,8 @@ export default function Home() {
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState("");
+  const [confirmRequest, setConfirmRequest] = useState(null);
+  const [notice, setNotice] = useState("");
   const lastPointer = useRef(null);
   const importInputRef = useRef(null);
 
@@ -133,16 +136,17 @@ export default function Home() {
     const data = await response.json();
 
     if (!response.ok) {
-      window.alert(data.error ?? "Could not load cloud data.");
+      showNotice(data.error ?? "Could not load cloud data.");
       return;
     }
 
     if (!data.state?.goals?.length) {
-      window.alert("No cloud data saved yet.");
+      showNotice("No cloud data saved yet.");
       return;
     }
 
     setState(data.state);
+    showNotice("Loaded cloud data.");
   }
 
   async function saveCloudState() {
@@ -154,21 +158,33 @@ export default function Home() {
     const data = await response.json();
 
     if (!response.ok) {
-      window.alert(data.error ?? "Could not save cloud data.");
+      showNotice(data.error ?? "Could not save cloud data.");
       return;
     }
 
-    window.alert("Saved to cloud.");
+    showNotice("Saved to cloud.");
   }
 
   function deleteCurrentGoal() {
     if (state.goals.length <= 1) {
-      window.alert("Keep at least one goal.");
+      showNotice("Keep at least one goal.");
       return;
     }
 
     const goal = state.goals.find((item) => item.id === state.currentGoalId);
-    if (!goal || !window.confirm(`Delete goal "${goal.title}" and all its nodes?`)) return;
+    if (!goal) return;
+    setConfirmRequest({
+      kind: "delete-goal",
+      id: goal.id,
+      title: "Delete Goal",
+      message: `Delete "${goal.title}" and all its nodes?`,
+      confirmLabel: "Delete",
+    });
+  }
+
+  function confirmDeleteCurrentGoal(goalId) {
+    const goal = state.goals.find((item) => item.id === goalId);
+    if (!goal) return;
 
     patchState((draft) => {
       const nextGoal = draft.goals.find((item) => item.id !== goal.id);
@@ -179,6 +195,7 @@ export default function Home() {
       draft.selectedNodeId = nextGoal.rootNodeId;
       resequenceRootGoals(draft);
     });
+    showNotice("Goal deleted.");
   }
 
   function addChild() {
@@ -228,21 +245,57 @@ export default function Home() {
 
   function deleteSelectedNode() {
     if (!selectedNode || selectedNode.kind === "goal") return;
-    if (!window.confirm(`Delete "${selectedNode.title}" and all children?`)) return;
-
-    patchState((draft) => {
-      const doomed = descendantsOf(draft, draft.selectedNodeId);
-      doomed.add(draft.selectedNodeId);
-      draft.nodes = draft.nodes.filter((node) => !doomed.has(node.id));
-      draft.successors = draft.successors.filter((edge) => !doomed.has(edge.sourceId) && !doomed.has(edge.targetId));
-      draft.selectedNodeId = selectedNode.parentId;
-      resequenceChildren(draft, selectedNode.parentId);
+    setConfirmRequest({
+      kind: "delete-node",
+      id: selectedNode.id,
+      title: "Delete Node",
+      message: `Delete "${selectedNode.title}" and all children?`,
+      confirmLabel: "Delete",
     });
   }
 
+  function confirmDeleteSelectedNode(nodeId) {
+    const node = state.nodes.find((item) => item.id === nodeId);
+    if (!node || node.kind === "goal") return;
+
+    patchState((draft) => {
+      const doomed = descendantsOf(draft, nodeId);
+      doomed.add(nodeId);
+      draft.nodes = draft.nodes.filter((node) => !doomed.has(node.id));
+      draft.successors = draft.successors.filter((edge) => !doomed.has(edge.sourceId) && !doomed.has(edge.targetId));
+      draft.selectedNodeId = node.parentId;
+      resequenceChildren(draft, node.parentId);
+    });
+    showNotice("Node deleted.");
+  }
+
   function resetDemo() {
-    if (!window.confirm("Reset local prototype data?")) return;
-    setState(sampleState());
+    setConfirmRequest({
+      kind: "reset-demo",
+      title: "Reset Demo Data",
+      message: "Reset local prototype data?",
+      confirmLabel: "Reset",
+    });
+  }
+
+  function confirmAction() {
+    if (!confirmRequest) return;
+
+    if (confirmRequest.kind === "delete-goal") confirmDeleteCurrentGoal(confirmRequest.id);
+    if (confirmRequest.kind === "delete-node") confirmDeleteSelectedNode(confirmRequest.id);
+    if (confirmRequest.kind === "reset-demo") {
+      setState(sampleState());
+      showNotice("Demo data reset.");
+    }
+
+    setConfirmRequest(null);
+  }
+
+  function showNotice(message) {
+    setNotice(message);
+    window.setTimeout(() => {
+      setNotice((current) => (current === message ? "" : current));
+    }, 3200);
   }
 
   function exportJson() {
@@ -267,7 +320,7 @@ export default function Home() {
         if (!imported.nodes?.length || !imported.goals?.length) throw new Error("Invalid export");
         setState(imported);
       } catch {
-        window.alert("Could not import that JSON file.");
+        showNotice("Could not import that JSON file.");
       }
     };
     reader.readAsText(file);
@@ -387,6 +440,18 @@ export default function Home() {
       {isCreateGoalOpen ? (
         <CreateGoalModal title={newGoalTitle} onClose={() => setIsCreateGoalOpen(false)} onSubmit={createGoal} onTitleChange={setNewGoalTitle} />
       ) : null}
+
+      {confirmRequest ? (
+        <ConfirmModal
+          confirmLabel={confirmRequest.confirmLabel}
+          message={confirmRequest.message}
+          onCancel={() => setConfirmRequest(null)}
+          onConfirm={confirmAction}
+          title={confirmRequest.title}
+        />
+      ) : null}
+
+      {notice ? <div className="notice">{notice}</div> : null}
     </main>
   );
 }
