@@ -1,14 +1,12 @@
-export function AuthPanel({ authMode, authError, email, password, user, onAuthModeChange, onEmailChange, onLoadCloud, onLogout, onPasswordChange, onSaveCloud, onSubmitAuth }) {
+export function AuthPanel({ authMode, authError, email, password, syncStatus, user, onAuthModeChange, onEmailChange, onLogout, onPasswordChange, onSubmitAuth, onSyncNow }) {
   if (user) {
     return (
       <div className="auth-panel">
         <p className="auth-user">{user.email}</p>
+        <p className={`sync-status sync-${syncStatus}`}>{syncLabel(syncStatus)}</p>
         <div className="auth-actions">
-          <button className="quiet-button" type="button" onClick={onLoadCloud}>
-            Load cloud
-          </button>
-          <button className="quiet-button" type="button" onClick={onSaveCloud}>
-            Save cloud
+          <button className="quiet-button" type="button" onClick={onSyncNow}>
+            Sync now
           </button>
           <button className="quiet-button" type="button" onClick={onLogout}>
             Logout
@@ -36,4 +34,12 @@ export function AuthPanel({ authMode, authError, email, password, user, onAuthMo
       </button>
     </form>
   );
+}
+
+function syncLabel(syncStatus) {
+  if (syncStatus === "loading") return "Loading cloud data...";
+  if (syncStatus === "saving") return "Saving...";
+  if (syncStatus === "saved") return "Saved";
+  if (syncStatus === "error") return "Sync error";
+  return "Autosave on";
 }

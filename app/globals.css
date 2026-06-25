@@ -179,6 +179,25 @@ h1 {
   white-space: nowrap;
 }
 
+.sync-status {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.sync-saving,
+.sync-loading {
+  color: #203878;
+}
+
+.sync-saved {
+  color: #1c7f38;
+}
+
+.sync-error {
+  color: #9e1f1f;
+}
+
 .auth-error {
   color: #9e1f1f;
   font-size: 12px;

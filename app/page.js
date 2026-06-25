@@ -43,8 +43,12 @@ export default function Home() {
   const [authError, setAuthError] = useState("");
   const [confirmRequest, setConfirmRequest] = useState(null);
   const [notice, setNotice] = useState("");
+  const [syncStatus, setSyncStatus] = useState("idle");
   const lastPointer = useRef(null);
   const importInputRef = useRef(null);
+  const autosaveTimerRef = useRef(null);
+  const hasLoadedCloudRef = useRef(false);
+  const lastSavedJsonRef = useRef("");
 
   useEffect(() => {
     setState(loadStoredState());
@@ -59,6 +63,31 @@ export default function Home() {
     if (!isReady) return;
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [isReady, state]);
+
+  useEffect(() => {
+    if (!user) {
+      hasLoadedCloudRef.current = false;
+      lastSavedJsonRef.current = "";
+      setSyncStatus("idle");
+      return;
+    }
+
+    loadCloudState({ seedIfEmpty: true, silent: true });
+  }, [user]);
+
+  useEffect(() => {
+    if (!isReady || !user || !hasLoadedCloudRef.current) return;
+
+    const serialized = JSON.stringify(state);
+    if (serialized === lastSavedJsonRef.current) return;
+
+    window.clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = window.setTimeout(() => {
+      saveCloudState({ silent: true, stateToSave: state });
+    }, 900);
+
+    return () => window.clearTimeout(autosaveTimerRef.current);
+  }, [isReady, state, user]);
 
   const model = useMemo(() => createModel(state), [state]);
   const selectedNode = model.selectedNode();
@@ -127,42 +156,60 @@ export default function Home() {
   }
 
   async function logout() {
+    window.clearTimeout(autosaveTimerRef.current);
     await fetch("/api/auth/logout", { method: "POST" });
     setUser(null);
   }
 
-  async function loadCloudState() {
+  async function loadCloudState({ seedIfEmpty = false, silent = false } = {}) {
+    setSyncStatus("loading");
     const response = await fetch("/api/state");
     const data = await response.json();
 
     if (!response.ok) {
-      showNotice(data.error ?? "Could not load cloud data.");
+      setSyncStatus("error");
+      if (!silent) showNotice(data.error ?? "Could not load cloud data.");
       return;
     }
 
     if (!data.state?.goals?.length) {
-      showNotice("No cloud data saved yet.");
+      hasLoadedCloudRef.current = true;
+      if (seedIfEmpty) {
+        await saveCloudState({ silent: true, stateToSave: state });
+        return;
+      }
+      setSyncStatus("idle");
+      if (!silent) showNotice("No cloud data saved yet.");
       return;
     }
 
+    const serialized = JSON.stringify(data.state);
+    lastSavedJsonRef.current = serialized;
+    hasLoadedCloudRef.current = true;
     setState(data.state);
-    showNotice("Loaded cloud data.");
+    setSyncStatus("saved");
+    if (!silent) showNotice("Loaded cloud data.");
   }
 
-  async function saveCloudState() {
+  async function saveCloudState({ silent = false, stateToSave = state } = {}) {
+    setSyncStatus("saving");
     const response = await fetch("/api/state", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ state }),
+      body: JSON.stringify({ state: stateToSave }),
     });
     const data = await response.json();
 
     if (!response.ok) {
-      showNotice(data.error ?? "Could not save cloud data.");
+      setSyncStatus("error");
+      if (!silent) showNotice(data.error ?? "Could not save cloud data.");
       return;
     }
 
-    showNotice("Saved to cloud.");
+    lastSavedJsonRef.current = JSON.stringify(stateToSave);
+    hasLoadedCloudRef.current = true;
+    setSyncStatus("saved");
+    if (!silent) showNotice("Saved to cloud.");
   }
 
   function deleteCurrentGoal() {
@@ -380,6 +427,7 @@ export default function Home() {
         email={authEmail}
         password={authPassword}
         state={state}
+        syncStatus={syncStatus}
         user={user}
         importInputRef={importInputRef}
         onAuthModeChange={setAuthMode}
@@ -387,11 +435,9 @@ export default function Home() {
         onEmailChange={setAuthEmail}
         onExportJson={exportJson}
         onImportJson={importJson}
-        onLoadCloud={loadCloudState}
         onLogout={logout}
         onPasswordChange={setAuthPassword}
         onResetDemo={resetDemo}
-        onSaveCloud={saveCloudState}
         onSelectGoal={(goal) =>
           patchState((draft) => {
             draft.currentGoalId = goal.id;
@@ -399,6 +445,7 @@ export default function Home() {
           })
         }
         onSubmitAuth={submitAuth}
+        onSyncNow={() => saveCloudState({ silent: false })}
       />
 
       <GraphCanvas

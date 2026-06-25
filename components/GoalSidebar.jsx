@@ -8,6 +8,7 @@ export function GoalSidebar({
   email,
   password,
   state,
+  syncStatus,
   user,
   importInputRef,
   onAuthModeChange,
@@ -15,13 +16,12 @@ export function GoalSidebar({
   onEmailChange,
   onExportJson,
   onImportJson,
-  onLoadCloud,
   onLogout,
   onPasswordChange,
   onResetDemo,
-  onSaveCloud,
   onSelectGoal,
   onSubmitAuth,
+  onSyncNow,
 }) {
   return (
     <aside className="goal-list" aria-label="Goals">
@@ -38,14 +38,14 @@ export function GoalSidebar({
         authError={authError}
         email={email}
         password={password}
+        syncStatus={syncStatus}
         user={user}
         onAuthModeChange={onAuthModeChange}
         onEmailChange={onEmailChange}
-        onLoadCloud={onLoadCloud}
         onLogout={onLogout}
         onPasswordChange={onPasswordChange}
-        onSaveCloud={onSaveCloud}
         onSubmitAuth={onSubmitAuth}
+        onSyncNow={onSyncNow}
       />
 
       <div className="action-stack">
