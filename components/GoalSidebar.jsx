@@ -1,7 +1,28 @@
 import { Legend } from "./Legend";
 import { goalDueState } from "../lib/model";
+import { AuthPanel } from "./AuthPanel";
 
-export function GoalSidebar({ state, importInputRef, onCreateGoal, onExportJson, onImportJson, onResetDemo, onSelectGoal }) {
+export function GoalSidebar({
+  authMode,
+  authError,
+  email,
+  password,
+  state,
+  user,
+  importInputRef,
+  onAuthModeChange,
+  onCreateGoal,
+  onEmailChange,
+  onExportJson,
+  onImportJson,
+  onLoadCloud,
+  onLogout,
+  onPasswordChange,
+  onResetDemo,
+  onSaveCloud,
+  onSelectGoal,
+  onSubmitAuth,
+}) {
   return (
     <aside className="goal-list" aria-label="Goals">
       <div className="brand">
@@ -11,6 +32,21 @@ export function GoalSidebar({ state, importInputRef, onCreateGoal, onExportJson,
           <p>Goal graphs</p>
         </div>
       </div>
+
+      <AuthPanel
+        authMode={authMode}
+        authError={authError}
+        email={email}
+        password={password}
+        user={user}
+        onAuthModeChange={onAuthModeChange}
+        onEmailChange={onEmailChange}
+        onLoadCloud={onLoadCloud}
+        onLogout={onLogout}
+        onPasswordChange={onPasswordChange}
+        onSaveCloud={onSaveCloud}
+        onSubmitAuth={onSubmitAuth}
+      />
 
       <div className="action-stack">
         <button className="primary-button" type="button" onClick={onCreateGoal}>

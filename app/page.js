@@ -35,12 +35,21 @@ export default function Home() {
   const [isCreateGoalOpen, setIsCreateGoalOpen] = useState(false);
   const [newGoalTitle, setNewGoalTitle] = useState("New goal");
   const [successorLinkTargetId, setSuccessorLinkTargetId] = useState("");
+  const [user, setUser] = useState(null);
+  const [authMode, setAuthMode] = useState("login");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authError, setAuthError] = useState("");
   const lastPointer = useRef(null);
   const importInputRef = useRef(null);
 
   useEffect(() => {
     setState(loadStoredState());
     setIsReady(true);
+    fetch("/api/auth/me")
+      .then((response) => response.json())
+      .then((data) => setUser(data.user))
+      .catch(() => setUser(null));
   }, []);
 
   useEffect(() => {
@@ -92,6 +101,64 @@ export default function Home() {
     });
     setNewGoalTitle("New goal");
     setIsCreateGoalOpen(false);
+  }
+
+  async function submitAuth(event) {
+    event.preventDefault();
+    setAuthError("");
+
+    const response = await fetch(`/api/auth/${authMode}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: authEmail, password: authPassword }),
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      setAuthError(data.error ?? "Authentication failed.");
+      return;
+    }
+
+    setUser(data.user);
+    setAuthPassword("");
+  }
+
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    setUser(null);
+  }
+
+  async function loadCloudState() {
+    const response = await fetch("/api/state");
+    const data = await response.json();
+
+    if (!response.ok) {
+      window.alert(data.error ?? "Could not load cloud data.");
+      return;
+    }
+
+    if (!data.state?.goals?.length) {
+      window.alert("No cloud data saved yet.");
+      return;
+    }
+
+    setState(data.state);
+  }
+
+  async function saveCloudState() {
+    const response = await fetch("/api/state", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ state }),
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      window.alert(data.error ?? "Could not save cloud data.");
+      return;
+    }
+
+    window.alert("Saved to cloud.");
   }
 
   function deleteCurrentGoal() {
@@ -255,18 +322,30 @@ export default function Home() {
   return (
     <main className="app-shell">
       <GoalSidebar
+        authMode={authMode}
+        authError={authError}
+        email={authEmail}
+        password={authPassword}
         state={state}
+        user={user}
         importInputRef={importInputRef}
+        onAuthModeChange={setAuthMode}
         onCreateGoal={() => setIsCreateGoalOpen(true)}
+        onEmailChange={setAuthEmail}
         onExportJson={exportJson}
         onImportJson={importJson}
+        onLoadCloud={loadCloudState}
+        onLogout={logout}
+        onPasswordChange={setAuthPassword}
         onResetDemo={resetDemo}
+        onSaveCloud={saveCloudState}
         onSelectGoal={(goal) =>
           patchState((draft) => {
             draft.currentGoalId = goal.id;
             draft.selectedNodeId = goal.rootNodeId;
           })
         }
+        onSubmitAuth={submitAuth}
       />
 
       <GraphCanvas

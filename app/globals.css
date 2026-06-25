@@ -134,6 +134,56 @@ h1 {
   margin-bottom: 26px;
 }
 
+.auth-panel {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 22px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: white;
+}
+
+.auth-mode {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.auth-mode button,
+.auth-actions button {
+  min-height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fbfaf8;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.auth-mode button.active {
+  border-color: #203878;
+  color: #203878;
+}
+
+.auth-actions {
+  display: grid;
+  gap: 6px;
+}
+
+.auth-user {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-error {
+  color: #9e1f1f;
+  font-size: 12px;
+}
+
 .goal-section,
 .legend {
   display: grid;
