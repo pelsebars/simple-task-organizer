@@ -14,6 +14,9 @@ export function NodeDetailPanel({
   onSetSuccessorLinkTargetId,
   onUpdateNode,
 }) {
+  const childRollupNodes = selectedNode ? model.childrenOf(selectedNode.id) : [];
+  const childRollupStatus = selectedNode ? model.childStatus(selectedNode.id) : null;
+
   return (
     <aside className="detail-panel" aria-label="Node details">
       {!selectedNode ? (
@@ -39,6 +42,21 @@ export function NodeDetailPanel({
               <strong>{model.childrenOf(selectedNode.id).length}</strong>
             </div>
           </div>
+
+          {childRollupNodes.length > 0 ? (
+            <section className="relation-section">
+              <h2>Child Rollup</h2>
+              <p className="muted-copy">Status: {childRollupStatus}</p>
+              {childRollupNodes.map((node) => (
+                <div className="relation-row" key={node.id}>
+                  <span>
+                    {model.treeNumber(node.id)}: {node.title}
+                  </span>
+                  <strong>{model.displayStatus(node.id)}</strong>
+                </div>
+              ))}
+            </section>
+          ) : null}
 
           <div>
             <label htmlFor="ownStatus">Self status</label>
