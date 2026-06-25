@@ -6,6 +6,7 @@ import { CreateGoalModal } from "../components/CreateGoalModal";
 import { GoalSidebar } from "../components/GoalSidebar";
 import { GraphCanvas } from "../components/GraphCanvas";
 import { NodeDetailPanel } from "../components/NodeDetailPanel";
+import { buildGoalContext, generateBriefing } from "../lib/briefings";
 import {
   clamp,
   createModel,
@@ -44,6 +45,8 @@ export default function Home() {
   const [confirmRequest, setConfirmRequest] = useState(null);
   const [notice, setNotice] = useState("");
   const [syncStatus, setSyncStatus] = useState("idle");
+  const [briefingType, setBriefingType] = useState("daily_standup");
+  const [briefingText, setBriefingText] = useState("");
   const lastPointer = useRef(null);
   const importInputRef = useRef(null);
   const autosaveTimerRef = useRef(null);
@@ -345,6 +348,17 @@ export default function Home() {
     }, 3200);
   }
 
+  function generateCurrentBriefing() {
+    const context = buildGoalContext(state, state.currentGoalId);
+    setBriefingText(generateBriefing(context, briefingType));
+  }
+
+  async function copyBriefing() {
+    if (!briefingText) return;
+    await navigator.clipboard.writeText(briefingText);
+    showNotice("Briefing copied.");
+  }
+
   function exportJson() {
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -424,6 +438,8 @@ export default function Home() {
       <GoalSidebar
         authMode={authMode}
         authError={authError}
+        briefingText={briefingText}
+        briefingType={briefingType}
         email={authEmail}
         password={authPassword}
         state={state}
@@ -431,12 +447,15 @@ export default function Home() {
         user={user}
         importInputRef={importInputRef}
         onAuthModeChange={setAuthMode}
+        onBriefingTypeChange={setBriefingType}
+        onCopyBriefing={copyBriefing}
         onCreateGoal={() => setIsCreateGoalOpen(true)}
         onEmailChange={setAuthEmail}
         onExportJson={exportJson}
         onImportJson={importJson}
         onLogout={logout}
         onPasswordChange={setAuthPassword}
+        onGenerateBriefing={generateCurrentBriefing}
         onResetDemo={resetDemo}
         onSelectGoal={(goal) =>
           patchState((draft) => {

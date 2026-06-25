@@ -1,10 +1,13 @@
 import { Legend } from "./Legend";
 import { goalDueState } from "../lib/model";
 import { AuthPanel } from "./AuthPanel";
+import { BriefingPanel } from "./BriefingPanel";
 
 export function GoalSidebar({
   authMode,
   authError,
+  briefingText,
+  briefingType,
   email,
   password,
   state,
@@ -12,12 +15,15 @@ export function GoalSidebar({
   user,
   importInputRef,
   onAuthModeChange,
+  onBriefingTypeChange,
+  onCopyBriefing,
   onCreateGoal,
   onEmailChange,
   onExportJson,
   onImportJson,
   onLogout,
   onPasswordChange,
+  onGenerateBriefing,
   onResetDemo,
   onSelectGoal,
   onSubmitAuth,
@@ -86,6 +92,14 @@ export function GoalSidebar({
           })}
         </div>
       </div>
+
+      <BriefingPanel
+        briefingText={briefingText}
+        briefingType={briefingType}
+        onBriefingTypeChange={onBriefingTypeChange}
+        onCopy={onCopyBriefing}
+        onGenerate={onGenerateBriefing}
+      />
 
       <Legend />
     </aside>

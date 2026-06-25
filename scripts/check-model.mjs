@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { buildGoalContext, generateBriefing } from "../lib/briefings.js";
 import { createModel } from "../lib/model.js";
 
 const state = {
@@ -33,6 +34,10 @@ assert.equal(model.workStatus("a"), "done");
 state.nodes.find((item) => item.id === "b").ownStatus = "ongoing";
 assert.equal(createModel(state).childStatus("parent"), "ongoing");
 assert.equal(createModel(state).workStatus("a"), "ongoing");
+
+const context = buildGoalContext(state, "goal");
+assert.equal(context.metrics.total, 4);
+assert.match(generateBriefing(context, "status_mail"), /Subject: Status update - Goal/);
 
 console.log("Model checks passed");
 
