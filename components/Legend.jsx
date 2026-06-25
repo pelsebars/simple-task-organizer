@@ -17,7 +17,7 @@ export function Legend() {
       <div className="legend">
         <h2>Node type</h2>
         <p>
-          <span className="swatch swatch-child" /> Child stream
+          <span className="swatch swatch-child" /> Work stream
         </p>
         <p>
           <span className="swatch swatch-successor" /> Successor

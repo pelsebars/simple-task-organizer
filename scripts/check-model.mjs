@@ -28,9 +28,11 @@ assert.deepEqual(
   ["a", "b", "c"],
 );
 assert.equal(model.childStatus("parent"), "done");
+assert.equal(model.workStatus("a"), "done");
 
 state.nodes.find((item) => item.id === "b").ownStatus = "ongoing";
 assert.equal(createModel(state).childStatus("parent"), "ongoing");
+assert.equal(createModel(state).workStatus("a"), "ongoing");
 
 console.log("Model checks passed");
 

@@ -46,7 +46,7 @@ export function GraphCanvas({ model, scale, panX, panY, selectedNodeId, onSelect
           <div className="node-layer">
             {model.currentNodes().map((node) => {
               const position = model.positionOf(node.id);
-              const childStatus = model.childStatus(node.id);
+              const workStatus = model.workStatus(node.id);
               const due = model.dueState(node);
               const roleClass = model.roleClass(node);
               const warningClass = due === "soon" || due === "overdue" ? `due-${due}` : "";
@@ -62,10 +62,10 @@ export function GraphCanvas({ model, scale, panX, panY, selectedNodeId, onSelect
                   <span className="node-title">
                     {model.treeNumber(node.id)}: {node.title}
                   </span>
-                  <span className="status-stack">
-                    <StatusLine label="Self" status={node.ownStatus} />
-                    {childStatus ? <StatusLine label="Child" status={childStatus} /> : null}
-                  </span>
+                    <span className="status-stack">
+                      <StatusLine label="Self" status={node.ownStatus} />
+                    {workStatus ? <StatusLine label="Work" status={workStatus} /> : null}
+                    </span>
                   {warningClass ? <span className="due-badge">{formatDueDate(node.dueDate)}</span> : null}
                 </button>
               );

@@ -14,8 +14,8 @@ export function NodeDetailPanel({
   onSetSuccessorLinkTargetId,
   onUpdateNode,
 }) {
-  const childRollupNodes = selectedNode ? model.childrenOf(selectedNode.id) : [];
-  const childRollupStatus = selectedNode ? model.childStatus(selectedNode.id) : null;
+  const workRollupNodes = selectedNode ? model.workItemsOf(selectedNode.id) : [];
+  const workRollupStatus = selectedNode ? model.workStatus(selectedNode.id) : null;
 
   return (
     <aside className="detail-panel" aria-label="Node details">
@@ -38,16 +38,16 @@ export function NodeDetailPanel({
               <strong>{selectedNode.publicId}</strong>
             </div>
             <div>
-              <span>Children</span>
-              <strong>{model.childrenOf(selectedNode.id).length}</strong>
+              <span>Work items</span>
+              <strong>{workRollupNodes.length}</strong>
             </div>
           </div>
 
-          {childRollupNodes.length > 0 ? (
+          {workRollupNodes.length > 0 ? (
             <section className="relation-section">
-              <h2>Child Rollup</h2>
-              <p className="muted-copy">Status: {childRollupStatus}</p>
-              {childRollupNodes.map((node) => (
+              <h2>Work Rollup</h2>
+              <p className="muted-copy">Status: {workRollupStatus}</p>
+              {workRollupNodes.map((node) => (
                 <div className="relation-row" key={node.id}>
                   <span>
                     {model.treeNumber(node.id)}: {node.title}
