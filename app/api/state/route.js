@@ -62,6 +62,7 @@ export async function GET() {
         id: goal.id,
         rootNodeId: goal.nodes.find((node) => node.kind === "goal")?.id ?? goal.id,
         title: goal.title,
+        stakeholders: goal.stakeholders,
       })),
       nodes,
       successors,
@@ -88,6 +89,7 @@ export async function PUT(request) {
           id: goal.id,
           ownerId: user.id,
           title: goal.title,
+          stakeholders: goal.stakeholders ?? "",
           sortOrder: root?.sortOrder ?? 1,
         },
       });

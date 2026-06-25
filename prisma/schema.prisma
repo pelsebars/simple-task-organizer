@@ -38,12 +38,13 @@ model Session {
 }
 
 model Goal {
-  id        String   @id @default(cuid())
-  ownerId   String
-  title     String
-  sortOrder Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  ownerId      String
+  title        String
+  stakeholders String   @default("")
+  sortOrder    Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   owner          User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   nodes          Node[]

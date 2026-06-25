@@ -123,7 +123,7 @@ export default function Home() {
     patchState((draft) => {
       const id = fallbackId();
       const publicId = draft.goals.length + 1;
-      draft.goals.push({ id, rootNodeId: id, title });
+      draft.goals.push({ id, rootNodeId: id, title, stakeholders: "" });
       draft.nodes.push(makeNode(id, publicId, null, title, "not_started", "", "", publicId, id, "goal"));
       draft.currentGoalId = id;
       draft.selectedNodeId = id;
@@ -470,6 +470,7 @@ export default function Home() {
       <NodeDetailPanel
         model={model}
         selectedNode={selectedNode}
+        selectedGoal={state.goals.find((goal) => goal.id === selectedNode?.goalId)}
         goalCount={state.goals.length}
         successorLinkTargetId={successorLinkTargetId}
         successorOptions={successorOptions}
@@ -482,6 +483,12 @@ export default function Home() {
         onRemoveSuccessor={removeSuccessor}
         onSetSuccessorLinkTargetId={setSuccessorLinkTargetId}
         onUpdateNode={updateSelectedNode}
+        onUpdateGoal={(patch) =>
+          patchState((draft) => {
+            const goal = draft.goals.find((item) => item.id === selectedNode?.goalId);
+            if (goal) Object.assign(goal, patch);
+          })
+        }
       />
 
       {isCreateGoalOpen ? (

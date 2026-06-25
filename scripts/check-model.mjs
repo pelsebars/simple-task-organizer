@@ -8,7 +8,7 @@ const state = {
   panX: 30,
   panY: 30,
   nextPublicId: 5,
-  goals: [{ id: "goal", rootNodeId: "parent", title: "Goal" }],
+  goals: [{ id: "goal", rootNodeId: "parent", title: "Goal", stakeholders: "" }],
   nodes: [
     node("parent", 1, null, "Parent", "not_started", 1, "goal"),
     node("a", 2, "parent", "A", "done", 1, "goal"),

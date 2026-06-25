@@ -1,6 +1,7 @@
 export function NodeDetailPanel({
   model,
   selectedNode,
+  selectedGoal,
   goalCount,
   successorLinkTargetId,
   successorOptions,
@@ -12,6 +13,7 @@ export function NodeDetailPanel({
   onLinkExistingSuccessor,
   onRemoveSuccessor,
   onSetSuccessorLinkTargetId,
+  onUpdateGoal,
   onUpdateNode,
 }) {
   const workRollupNodes = selectedNode ? model.workItemsOf(selectedNode.id) : [];
@@ -76,6 +78,18 @@ export function NodeDetailPanel({
             <label htmlFor="conclusion">Conclusion</label>
             <textarea id="conclusion" rows={7} value={selectedNode.conclusion} onChange={(event) => onUpdateNode({ conclusion: event.target.value })} />
           </div>
+
+          {selectedNode.kind === "goal" ? (
+            <div>
+              <label htmlFor="stakeholders">Stakeholders</label>
+              <textarea
+                id="stakeholders"
+                rows={7}
+                value={selectedGoal?.stakeholders ?? ""}
+                onChange={(event) => onUpdateGoal({ stakeholders: event.target.value })}
+              />
+            </div>
+          ) : null}
 
           <div className="button-row">
             <button className="secondary-button" type="button" onClick={onAddChild}>
