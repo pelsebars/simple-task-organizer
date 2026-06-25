@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum NodeStatus {
+  NOT_STARTED
+  ONGOING
+  DONE
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  goals Goal[]
+}
+
+model Goal {
+  id        String   @id @default(cuid())
+  ownerId   String
+  title     String
+  sortOrder Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner          User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  nodes          Node[]
+  successorEdges SuccessorEdge[]
+
+  @@index([ownerId, sortOrder])
+}
+
+model Node {
+  id         String     @id @default(cuid())
+  publicId  Int
+  goalId    String
+  parentId  String?
+  title      String
+  ownStatus  NodeStatus @default(NOT_STARTED)
+  dueDate    DateTime?
+  conclusion String     @default("")
+  sortOrder  Int
+  kind       String     @default("node")
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  goal Goal  @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  parent Node? @relation("NodeChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children Node[] @relation("NodeChildren")
+  outgoingSuccessors SuccessorEdge[] @relation("SuccessorSource")
+  incomingSuccessors SuccessorEdge[] @relation("SuccessorTarget")
+
+  @@unique([goalId, publicId])
+  @@index([goalId, parentId, sortOrder])
+}
+
+model SuccessorEdge {
+  id        String   @id @default(cuid())
+  goalId    String
+  sourceId  String
+  targetId  String
+  createdAt DateTime @default(now())
+
+  goal   Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  source Node @relation("SuccessorSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  target Node @relation("SuccessorTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, targetId])
+  @@index([goalId])
+}

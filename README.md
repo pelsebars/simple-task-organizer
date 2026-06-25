@@ -23,6 +23,21 @@ Open `http://localhost:3000`.
 
 Current persistence is `localStorage`, so data is saved per browser/device. The next backend step is Railway Postgres plus auth.
 
+## Database
+
+The app is prepared for PostgreSQL with Prisma.
+
+Local setup:
+
+```bash
+cp .env.example .env.local
+# Fill DATABASE_URL in .env.local
+npm run db:generate
+npm run db:migrate
+```
+
+For production, add `DATABASE_URL` as an environment variable in Vercel before deploying backend-backed routes.
+
 ## Prototype
 
 The original static prototype is kept in `prototype/` for reference. The active app is the Next.js app in `app/`, `components/`, and `lib/`.
