@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Simple Task Organizer</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="goal-list" aria-label="Goals">
+        <div class="brand">
+          <span class="brand-mark"></span>
+          <div>
+            <h1>Task Organizer</h1>
+            <p>Goal graphs</p>
+          </div>
+        </div>
+
+        <div class="action-stack">
+          <button class="primary-button" id="createGoalButton" type="button">Create new</button>
+          <button class="quiet-button" id="resetDataButton" type="button">Reset demo data</button>
+        </div>
+
+        <div class="goal-section">
+          <h2>Goals</h2>
+          <div class="goal-list-items" id="goalList"></div>
+        </div>
+
+        <div class="legend">
+          <h2>Status</h2>
+          <p><span class="dot status-not-started"></span>Not started</p>
+          <p><span class="dot status-ongoing"></span>Ongoing</p>
+          <p><span class="dot status-done"></span>Done</p>
+        </div>
+
+        <div class="legend">
+          <h2>Node type</h2>
+          <p><span class="swatch swatch-child"></span>Child stream</p>
+          <p><span class="swatch swatch-successor"></span>Successor</p>
+        </div>
+
+        <div class="legend">
+          <h2>Due date</h2>
+          <p><span class="swatch swatch-soon"></span>Due in 1-2 days</p>
+          <p><span class="swatch swatch-overdue"></span>Due today or late</p>
+        </div>
+      </aside>
+
+      <section class="canvas-wrap" aria-label="Goal graph">
+        <div class="toolbar">
+          <button id="zoomOutButton" type="button">-</button>
+          <span id="zoomLabel">100%</span>
+          <button id="zoomInButton" type="button">+</button>
+          <button id="resetViewButton" type="button">Reset</button>
+        </div>
+        <div class="canvas" id="canvas">
+          <div class="graph-layer" id="graphLayer">
+            <svg class="edge-layer" id="edgeLayer" aria-hidden="true"></svg>
+            <div class="node-layer" id="nodeLayer"></div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="detail-panel" id="detailPanel" aria-label="Node details">
+        <div class="empty-state" id="emptyState">
+          <h2>Select a node</h2>
+          <p>Click a node to edit status, due date, and conclusion.</p>
+        </div>
+
+        <form class="node-form hidden" id="nodeForm">
+          <div>
+            <p class="overline" id="nodeNumber">1.3.2</p>
+            <label for="nodeTitle">Name</label>
+            <input id="nodeTitle" name="nodeTitle" type="text" />
+          </div>
+
+          <div class="meta-grid">
+            <div>
+              <span>Unique ID</span>
+              <strong id="nodePublicId">42</strong>
+            </div>
+            <div>
+              <span>Children</span>
+              <strong id="nodeChildCount">0</strong>
+            </div>
+          </div>
+
+          <div>
+            <label for="ownStatus">Self status</label>
+            <select id="ownStatus" name="ownStatus">
+              <option value="not_started">Not started</option>
+              <option value="ongoing">Ongoing</option>
+              <option value="done">Done</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="dueDate">Due date</label>
+            <input id="dueDate" name="dueDate" type="date" />
+          </div>
+
+          <div>
+            <label for="conclusion">Conclusion</label>
+            <textarea id="conclusion" name="conclusion" rows="7"></textarea>
+          </div>
+
+          <div class="button-row">
+            <button class="secondary-button" id="addChildButton" type="button">Add child</button>
+            <button class="secondary-button" id="addSuccessorButton" type="button">Add successor</button>
+          </div>
+        </form>
+      </aside>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
