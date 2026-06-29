@@ -54,6 +54,8 @@ export default function Home() {
   const autosaveTimerRef = useRef(null);
   const hasLoadedCloudRef = useRef(false);
   const lastSavedJsonRef = useRef("");
+  const saveInFlightRef = useRef(false);
+  const pendingSaveRef = useRef(null);
 
   useEffect(() => {
     setState(loadStoredState());
@@ -168,8 +170,17 @@ export default function Home() {
 
   async function loadCloudState({ seedIfEmpty = false, silent = false } = {}) {
     setSyncStatus("loading");
-    const response = await fetch("/api/state");
-    const data = await response.json();
+    let response;
+    let data;
+
+    try {
+      response = await fetchWithTimeout("/api/state", {}, 20000);
+      data = await readJsonResponse(response);
+    } catch {
+      setSyncStatus("error");
+      if (!silent) showNotice("Could not reach cloud storage.");
+      return;
+    }
 
     if (!response.ok) {
       setSyncStatus("error");
@@ -197,24 +208,45 @@ export default function Home() {
   }
 
   async function saveCloudState({ silent = false, stateToSave = state } = {}) {
-    setSyncStatus("saving");
-    const response = await fetch("/api/state", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ state: stateToSave }),
-    });
-    const data = await response.json();
+    pendingSaveRef.current = { silent, state: structuredClone(stateToSave) };
+    if (saveInFlightRef.current) return;
 
-    if (!response.ok) {
-      setSyncStatus("error");
-      if (!silent) showNotice(data.error ?? "Could not save cloud data.");
-      return;
+    saveInFlightRef.current = true;
+
+    try {
+      while (pendingSaveRef.current) {
+        const pending = pendingSaveRef.current;
+        pendingSaveRef.current = null;
+        setSyncStatus("saving");
+
+        try {
+          const response = await fetchWithTimeout(
+            "/api/state",
+            {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ state: pending.state }),
+            },
+            25000,
+          );
+          const data = await readJsonResponse(response);
+
+          if (!response.ok) throw new Error(data.error ?? "Could not save cloud data.");
+
+          lastSavedJsonRef.current = JSON.stringify(pending.state);
+          hasLoadedCloudRef.current = true;
+          if (!pending.silent) showNotice("Saved to cloud.");
+        } catch (error) {
+          setSyncStatus("error");
+          if (!pending.silent) showNotice(error.message ?? "Could not save cloud data.");
+          return;
+        }
+      }
+
+      setSyncStatus("saved");
+    } finally {
+      saveInFlightRef.current = false;
     }
-
-    lastSavedJsonRef.current = JSON.stringify(stateToSave);
-    hasLoadedCloudRef.current = true;
-    setSyncStatus("saved");
-    if (!silent) showNotice("Saved to cloud.");
   }
 
   function deleteCurrentGoal() {
@@ -544,4 +576,26 @@ export default function Home() {
       {notice ? <div className="notice">{notice}</div> : null}
     </main>
   );
+}
+
+async function fetchWithTimeout(url, options, timeoutMs) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
+async function readJsonResponse(response) {
+  const text = await response.text();
+  if (!text) return {};
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { error: `Cloud storage returned an invalid response (${response.status}).` };
+  }
 }

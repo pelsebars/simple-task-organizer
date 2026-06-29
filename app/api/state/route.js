@@ -80,51 +80,87 @@ export async function PUT(request) {
     return NextResponse.json({ error: "Invalid state payload." }, { status: 400 });
   }
 
-  await prisma.$transaction(async (tx) => {
-    await tx.goal.deleteMany({ where: { ownerId: user.id } });
+  const validationError = validateState(state);
+  if (validationError) return NextResponse.json({ error: validationError }, { status: 400 });
 
-    for (const goal of state.goals) {
-      const root = state.nodes.find((node) => node.id === goal.rootNodeId);
-      await tx.goal.create({
-        data: {
-          id: goal.id,
-          ownerId: user.id,
-          title: goal.title,
-          context: goal.context ?? "",
-          stakeholders: goal.stakeholders ?? "",
-          sortOrder: root?.sortOrder ?? 1,
-        },
-      });
-    }
+  try {
+    await prisma.$transaction(
+      async (tx) => {
+        await tx.goal.deleteMany({ where: { ownerId: user.id } });
+        await tx.goal.createMany({
+          data: state.goals.map((goal) => {
+            const root = state.nodes.find((node) => node.id === goal.rootNodeId);
+            return {
+              id: goal.id,
+              ownerId: user.id,
+              title: goal.title,
+              context: goal.context ?? "",
+              stakeholders: goal.stakeholders ?? "",
+              sortOrder: root?.sortOrder ?? 1,
+            };
+          }),
+        });
 
-    const nodes = [...state.nodes].sort((a, b) => (a.parentId ? 1 : 0) - (b.parentId ? 1 : 0));
-    for (const node of nodes) {
-      await tx.node.create({
-        data: {
-          id: node.id,
-          publicId: node.publicId,
-          goalId: node.goalId,
-          parentId: node.parentId || null,
-          title: node.title,
-          ownStatus: statusToDb[node.ownStatus] ?? "NOT_STARTED",
-          dueDate: node.dueDate ? new Date(`${node.dueDate}T00:00:00.000Z`) : null,
-          conclusion: node.conclusion ?? "",
-          sortOrder: node.sortOrder,
-          kind: node.kind ?? "node",
-        },
-      });
-    }
+        const remaining = [...state.nodes];
+        const createdIds = new Set();
 
-    for (const edge of state.successors) {
-      await tx.successorEdge.create({
-        data: {
-          goalId: edge.goalId,
-          sourceId: edge.sourceId,
-          targetId: edge.targetId,
-        },
-      });
-    }
-  });
+        while (remaining.length) {
+          const batch = remaining.filter((node) => !node.parentId || createdIds.has(node.parentId));
+          if (!batch.length) throw new Error("Node hierarchy contains an invalid parent reference.");
 
-  return NextResponse.json({ ok: true });
+          await tx.node.createMany({ data: batch.map(nodeToDb) });
+          batch.forEach((node) => createdIds.add(node.id));
+          const batchIds = new Set(batch.map((node) => node.id));
+          for (let index = remaining.length - 1; index >= 0; index -= 1) {
+            if (batchIds.has(remaining[index].id)) remaining.splice(index, 1);
+          }
+        }
+
+        if (state.successors.length) {
+          await tx.successorEdge.createMany({
+            data: state.successors.map((edge) => ({
+              goalId: edge.goalId,
+              sourceId: edge.sourceId,
+              targetId: edge.targetId,
+            })),
+          });
+        }
+      },
+      { maxWait: 5000, timeout: 15000 },
+    );
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("Cloud state save failed", error);
+    return NextResponse.json({ error: "Cloud save failed. Please try again." }, { status: 500 });
+  }
+}
+
+function nodeToDb(node) {
+  return {
+    id: node.id,
+    publicId: node.publicId,
+    goalId: node.goalId,
+    parentId: node.parentId || null,
+    title: node.title,
+    ownStatus: statusToDb[node.ownStatus] ?? "NOT_STARTED",
+    dueDate: node.dueDate ? new Date(`${node.dueDate}T00:00:00.000Z`) : null,
+    conclusion: node.conclusion ?? "",
+    sortOrder: node.sortOrder,
+    kind: node.kind ?? "node",
+  };
+}
+
+function validateState(state) {
+  const goalIds = new Set(state.goals.map((goal) => goal.id));
+  const nodeIds = new Set(state.nodes.map((node) => node.id));
+
+  if (goalIds.size !== state.goals.length || nodeIds.size !== state.nodes.length) return "Duplicate IDs in state payload.";
+  if (state.nodes.some((node) => !goalIds.has(node.goalId))) return "A node references an unknown goal.";
+  if (state.nodes.some((node) => node.parentId && !nodeIds.has(node.parentId))) return "A node references an unknown parent.";
+  if (state.successors.some((edge) => !goalIds.has(edge.goalId) || !nodeIds.has(edge.sourceId) || !nodeIds.has(edge.targetId))) {
+    return "A successor references an unknown node.";
+  }
+
+  return "";
 }
