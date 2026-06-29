@@ -22,6 +22,8 @@ model User {
 
   goals Goal[]
   sessions Session[]
+  changeEvents ChangeEvent[]
+  updateCheckpoints UpdateCheckpoint[]
 }
 
 model Session {
@@ -91,4 +93,33 @@ model SuccessorEdge {
 
   @@unique([sourceId, targetId])
   @@index([goalId])
+}
+
+model ChangeEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  goalId    String
+  goalTitle String
+  nodeId    String?
+  nodeTitle String?
+  eventType String
+  field     String?
+  oldValue  String?
+  newValue  String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, goalId, createdAt])
+}
+
+model UpdateCheckpoint {
+  id       String   @id @default(cuid())
+  userId   String
+  goalId   String
+  sharedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, goalId])
 }

@@ -49,6 +49,9 @@ export default function Home() {
   const [syncStatus, setSyncStatus] = useState("idle");
   const [briefingType, setBriefingType] = useState("status_mail");
   const [briefingText, setBriefingText] = useState("");
+  const [briefingHasChanges, setBriefingHasChanges] = useState(false);
+  const [isGeneratingBriefing, setIsGeneratingBriefing] = useState(false);
+  const [briefingGoalId, setBriefingGoalId] = useState(null);
   const lastPointer = useRef(null);
   const importInputRef = useRef(null);
   const autosaveTimerRef = useRef(null);
@@ -56,6 +59,7 @@ export default function Home() {
   const lastSavedJsonRef = useRef("");
   const saveInFlightRef = useRef(false);
   const pendingSaveRef = useRef(null);
+  const savePromiseRef = useRef(null);
 
   useEffect(() => {
     setState(loadStoredState());
@@ -209,44 +213,48 @@ export default function Home() {
 
   async function saveCloudState({ silent = false, stateToSave = state } = {}) {
     pendingSaveRef.current = { silent, state: structuredClone(stateToSave) };
-    if (saveInFlightRef.current) return;
+    if (saveInFlightRef.current) return savePromiseRef.current;
 
     saveInFlightRef.current = true;
+    savePromiseRef.current = (async () => {
+      try {
+        while (pendingSaveRef.current) {
+          const pending = pendingSaveRef.current;
+          pendingSaveRef.current = null;
+          setSyncStatus("saving");
 
-    try {
-      while (pendingSaveRef.current) {
-        const pending = pendingSaveRef.current;
-        pendingSaveRef.current = null;
-        setSyncStatus("saving");
+          try {
+            const response = await fetchWithTimeout(
+              "/api/state",
+              {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ state: pending.state }),
+              },
+              25000,
+            );
+            const data = await readJsonResponse(response);
 
-        try {
-          const response = await fetchWithTimeout(
-            "/api/state",
-            {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ state: pending.state }),
-            },
-            25000,
-          );
-          const data = await readJsonResponse(response);
+            if (!response.ok) throw new Error(data.error ?? "Could not save cloud data.");
 
-          if (!response.ok) throw new Error(data.error ?? "Could not save cloud data.");
-
-          lastSavedJsonRef.current = JSON.stringify(pending.state);
-          hasLoadedCloudRef.current = true;
-          if (!pending.silent) showNotice("Saved to cloud.");
-        } catch (error) {
-          setSyncStatus("error");
-          if (!pending.silent) showNotice(error.message ?? "Could not save cloud data.");
-          return;
+            lastSavedJsonRef.current = JSON.stringify(pending.state);
+            hasLoadedCloudRef.current = true;
+            if (!pending.silent) showNotice("Saved to cloud.");
+          } catch (error) {
+            setSyncStatus("error");
+            if (!pending.silent) showNotice(error.message ?? "Could not save cloud data.");
+            return;
+          }
         }
-      }
 
-      setSyncStatus("saved");
-    } finally {
-      saveInFlightRef.current = false;
-    }
+        setSyncStatus("saved");
+      } finally {
+        saveInFlightRef.current = false;
+        savePromiseRef.current = null;
+      }
+    })();
+
+    return savePromiseRef.current;
   }
 
   function deleteCurrentGoal() {
@@ -382,9 +390,48 @@ export default function Home() {
     }, 3200);
   }
 
-  function generateCurrentBriefing() {
+  async function generateCurrentBriefing() {
+    setIsGeneratingBriefing(true);
     const context = buildGoalContext(state, state.currentGoalId);
-    setBriefingText(generateBriefing(context, briefingType));
+
+    try {
+      if (briefingType === "status_mail" && user) {
+        await saveCloudState({ silent: true, stateToSave: state });
+        const response = await fetch(`/api/updates?goalId=${encodeURIComponent(state.currentGoalId)}`);
+        const data = await readJsonResponse(response);
+        if (!response.ok) throw new Error(data.error ?? "Could not load update history.");
+        context.changes = data.changes;
+        context.changesSince = data.since;
+        setBriefingHasChanges(data.changes.length > 0);
+      } else {
+        setBriefingHasChanges(false);
+      }
+
+      setBriefingText(generateBriefing(context, briefingType));
+      setBriefingGoalId(state.currentGoalId);
+    } catch (error) {
+      showNotice(error.message ?? "Could not generate briefing.");
+    } finally {
+      setIsGeneratingBriefing(false);
+    }
+  }
+
+  async function markBriefingShared() {
+    if (!briefingGoalId) return;
+    const response = await fetch("/api/updates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ goalId: briefingGoalId }),
+    });
+    const data = await readJsonResponse(response);
+
+    if (!response.ok) {
+      showNotice(data.error ?? "Could not mark update as shared.");
+      return;
+    }
+
+    setBriefingHasChanges(false);
+    showNotice("Stakeholder update marked as shared.");
   }
 
   async function copyBriefing() {
@@ -472,8 +519,10 @@ export default function Home() {
       <GoalSidebar
         authMode={authMode}
         authError={authError}
+        briefingHasChanges={briefingHasChanges}
         briefingText={briefingText}
         briefingType={briefingType}
+        isGeneratingBriefing={isGeneratingBriefing}
         email={authEmail}
         password={authPassword}
         state={state}
@@ -481,7 +530,12 @@ export default function Home() {
         user={user}
         importInputRef={importInputRef}
         onAuthModeChange={setAuthMode}
-        onBriefingTypeChange={setBriefingType}
+        onBriefingTypeChange={(type) => {
+          setBriefingType(type);
+          setBriefingText("");
+          setBriefingHasChanges(false);
+          setBriefingGoalId(null);
+        }}
         onCopyBriefing={copyBriefing}
         onCreateGoal={() => setIsCreateGoalOpen(true)}
         onEmailChange={setAuthEmail}
@@ -490,14 +544,18 @@ export default function Home() {
         onLogout={logout}
         onPasswordChange={setAuthPassword}
         onGenerateBriefing={generateCurrentBriefing}
+        onMarkBriefingShared={markBriefingShared}
         onOpenStandup={() => setIsStandupOpen(true)}
         onResetDemo={resetDemo}
-        onSelectGoal={(goal) =>
+        onSelectGoal={(goal) => {
           patchState((draft) => {
             draft.currentGoalId = goal.id;
             draft.selectedNodeId = goal.rootNodeId;
-          })
-        }
+          });
+          setBriefingText("");
+          setBriefingHasChanges(false);
+          setBriefingGoalId(null);
+        }}
         onSubmitAuth={submitAuth}
         onSyncNow={() => saveCloudState({ silent: false })}
       />

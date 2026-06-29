@@ -86,6 +86,12 @@ export async function PUT(request) {
   try {
     await prisma.$transaction(
       async (tx) => {
+        const previousGoals = await tx.goal.findMany({
+          where: { ownerId: user.id },
+          include: { nodes: true },
+        });
+        const changes = collectChanges(previousGoals, state, user.id);
+
         await tx.goal.deleteMany({ where: { ownerId: user.id } });
         await tx.goal.createMany({
           data: state.goals.map((goal) => {
@@ -125,6 +131,8 @@ export async function PUT(request) {
             })),
           });
         }
+
+        if (changes.length) await tx.changeEvent.createMany({ data: changes });
       },
       { maxWait: 5000, timeout: 15000 },
     );
@@ -163,4 +171,99 @@ function validateState(state) {
   }
 
   return "";
+}
+
+function collectChanges(previousGoals, state, userId) {
+  if (!previousGoals.length) return [];
+
+  const previousGoalsById = new Map(previousGoals.map((goal) => [goal.id, goal]));
+  const currentGoalsById = new Map(state.goals.map((goal) => [goal.id, goal]));
+  const previousNodes = new Map(previousGoals.flatMap((goal) => goal.nodes).map((node) => [node.id, node]));
+  const currentNodes = new Map(state.nodes.map((node) => [node.id, node]));
+  const changes = [];
+
+  for (const goal of state.goals) {
+    const previous = previousGoalsById.get(goal.id);
+    if (!previous) continue;
+
+    for (const field of ["title", "context", "stakeholders"]) {
+      addFieldChange(changes, {
+        userId,
+        goalId: goal.id,
+        goalTitle: goal.title,
+        eventType: "goal_updated",
+        field,
+        oldValue: previous[field],
+        newValue: goal[field] ?? "",
+      });
+    }
+  }
+
+  for (const node of state.nodes) {
+    if (node.kind === "goal") continue;
+    const goal = currentGoalsById.get(node.goalId);
+    const previous = previousNodes.get(node.id);
+
+    if (!previous) {
+      changes.push(changeRecord({ userId, goal, node, eventType: "node_created", newValue: node.title }));
+      continue;
+    }
+
+    const fields = {
+      title: [previous.title, node.title],
+      status: [statusFromDb[previous.ownStatus], node.ownStatus],
+      due_date: [dateValue(previous.dueDate), node.dueDate ?? ""],
+      conclusion: [previous.conclusion, node.conclusion ?? ""],
+    };
+
+    for (const [field, [oldValue, newValue]] of Object.entries(fields)) {
+      addFieldChange(changes, {
+        ...changeRecord({ userId, goal, node, eventType: "node_updated" }),
+        field,
+        oldValue,
+        newValue,
+      });
+    }
+  }
+
+  for (const previous of previousNodes.values()) {
+    if (previous.kind === "goal" || currentNodes.has(previous.id)) continue;
+    const goal = previousGoalsById.get(previous.goalId);
+    changes.push(
+      changeRecord({
+        userId,
+        goal: { id: previous.goalId, title: goal?.title ?? "Deleted goal" },
+        node: previous,
+        eventType: "node_deleted",
+        oldValue: previous.title,
+      }),
+    );
+  }
+
+  return changes;
+}
+
+function addFieldChange(changes, change) {
+  const oldValue = String(change.oldValue ?? "");
+  const newValue = String(change.newValue ?? "");
+  if (oldValue === newValue) return;
+  changes.push({ ...change, oldValue, newValue });
+}
+
+function changeRecord({ userId, goal, node, eventType, oldValue = null, newValue = null }) {
+  return {
+    userId,
+    goalId: goal.id,
+    goalTitle: goal.title,
+    nodeId: node?.id ?? null,
+    nodeTitle: node?.title ?? null,
+    eventType,
+    field: null,
+    oldValue,
+    newValue,
+  };
+}
+
+function dateValue(date) {
+  return date ? date.toISOString().slice(0, 10) : "";
 }

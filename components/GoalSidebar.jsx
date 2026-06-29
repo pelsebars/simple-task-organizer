@@ -6,8 +6,10 @@ import { BriefingPanel } from "./BriefingPanel";
 export function GoalSidebar({
   authMode,
   authError,
+  briefingHasChanges,
   briefingText,
   briefingType,
+  isGeneratingBriefing,
   email,
   password,
   state,
@@ -24,6 +26,7 @@ export function GoalSidebar({
   onLogout,
   onPasswordChange,
   onGenerateBriefing,
+  onMarkBriefingShared,
   onOpenStandup,
   onResetDemo,
   onSelectGoal,
@@ -98,11 +101,15 @@ export function GoalSidebar({
       </div>
 
       <BriefingPanel
+        briefingHasChanges={briefingHasChanges}
         briefingText={briefingText}
         briefingType={briefingType}
+        isGenerating={isGeneratingBriefing}
         onBriefingTypeChange={onBriefingTypeChange}
         onCopy={onCopyBriefing}
         onGenerate={onGenerateBriefing}
+        onMarkShared={onMarkBriefingShared}
+        user={user}
       />
 
       <Legend />

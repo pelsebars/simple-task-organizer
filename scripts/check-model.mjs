@@ -39,6 +39,16 @@ assert.equal(createModel(state).workStatus("a"), "ongoing");
 const context = buildGoalContext(state, "goal");
 assert.equal(context.metrics.total, 4);
 assert.match(generateBriefing(context, "status_mail"), /Subject: Status update - Goal/);
+assert.match(
+  generateBriefing(
+    {
+      ...context,
+      changes: [{ eventType: "node_updated", nodeTitle: "B", field: "status", oldValue: "not_started", newValue: "ongoing" }],
+    },
+    "status_mail",
+  ),
+  /B: status changed from not started to ongoing/,
+);
 
 state.nodes.find((item) => item.id === "a").dueDate = todayDate();
 state.nodes.find((item) => item.id === "b").dueDate = "";
