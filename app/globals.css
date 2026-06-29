@@ -102,6 +102,7 @@ h1 {
 }
 
 .primary-button,
+.standup-button,
 .quiet-button,
 .secondary-button,
 .danger-button,
@@ -119,6 +120,245 @@ h1 {
   background: #203878;
   color: white;
   font-weight: 700;
+}
+
+.standup-button {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #203878;
+  border-radius: 7px;
+  background: white;
+  color: #203878;
+  font-weight: 800;
+}
+
+.standup-backdrop {
+  position: fixed;
+  z-index: 30;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background: rgba(22, 20, 18, 0.48);
+}
+
+.standup-panel {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  width: min(880px, 100%);
+  max-height: min(820px, calc(100vh - 56px));
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fbfaf8;
+  box-shadow: 0 18px 55px rgba(20, 17, 14, 0.3);
+}
+
+.standup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 26px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.standup-header h2 {
+  margin-top: 3px;
+  font-size: 25px;
+}
+
+.standup-date {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.standup-close {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: white;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.standup-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-bottom: 1px solid var(--border);
+  background: white;
+}
+
+.standup-summary-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 14px 26px;
+  border-right: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.standup-summary-item:last-child {
+  border-right: 0;
+}
+
+.standup-summary-item strong {
+  color: var(--ink);
+  font-size: 22px;
+}
+
+.standup-summary-item.standup-urgent strong {
+  color: #b61919;
+}
+
+.standup-summary-item.standup-ongoing strong {
+  color: #2369c9;
+}
+
+.standup-content {
+  overflow: auto;
+  padding: 8px 26px 28px;
+}
+
+.standup-goal {
+  padding: 20px 0 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.standup-goal:last-child {
+  border-bottom: 0;
+}
+
+.standup-goal-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.standup-goal-heading h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.standup-goal-heading span,
+.standup-group h4 {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.standup-group {
+  margin-top: 14px;
+}
+
+.standup-group h4 {
+  margin: 0 0 7px;
+}
+
+.standup-tasks {
+  display: grid;
+  gap: 6px;
+}
+
+.standup-task {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  min-height: 48px;
+  padding: 8px 12px;
+  border: 1px solid #d8d1ca;
+  border-radius: 6px;
+  background: white;
+  color: var(--ink);
+  text-align: left;
+}
+
+.standup-task:hover {
+  border-color: #203878;
+}
+
+.standup-task-urgent {
+  border-left: 4px solid var(--overdue);
+}
+
+.standup-status {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.standup-task-name {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+  gap: 8px;
+}
+
+.standup-task-name small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.standup-task-name strong {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.standup-due {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.standup-task-urgent .standup-due {
+  color: #a11313;
+}
+
+.standup-empty {
+  padding: 50px 0;
+  color: var(--muted);
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .standup-backdrop {
+    padding: 10px;
+  }
+
+  .standup-panel {
+    max-height: calc(100vh - 20px);
+  }
+
+  .standup-summary-item {
+    display: grid;
+    gap: 0;
+    padding: 12px;
+  }
+
+  .standup-header,
+  .standup-content {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .standup-task-name {
+    display: grid;
+    gap: 1px;
+  }
+
+  .standup-due {
+    max-width: 88px;
+    text-align: right;
+  }
 }
 
 .quiet-button {

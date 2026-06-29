@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { CreateGoalModal } from "../components/CreateGoalModal";
+import { DailyStandupPanel } from "../components/DailyStandupPanel";
 import { GoalSidebar } from "../components/GoalSidebar";
 import { GraphCanvas } from "../components/GraphCanvas";
 import { NodeDetailPanel } from "../components/NodeDetailPanel";
@@ -35,6 +36,7 @@ export default function Home() {
   const [isReady, setIsReady] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
   const [isCreateGoalOpen, setIsCreateGoalOpen] = useState(false);
+  const [isStandupOpen, setIsStandupOpen] = useState(false);
   const [newGoalTitle, setNewGoalTitle] = useState("New goal");
   const [successorLinkTargetId, setSuccessorLinkTargetId] = useState("");
   const [user, setUser] = useState(null);
@@ -45,7 +47,7 @@ export default function Home() {
   const [confirmRequest, setConfirmRequest] = useState(null);
   const [notice, setNotice] = useState("");
   const [syncStatus, setSyncStatus] = useState("idle");
-  const [briefingType, setBriefingType] = useState("daily_standup");
+  const [briefingType, setBriefingType] = useState("status_mail");
   const [briefingText, setBriefingText] = useState("");
   const lastPointer = useRef(null);
   const importInputRef = useRef(null);
@@ -456,6 +458,7 @@ export default function Home() {
         onLogout={logout}
         onPasswordChange={setAuthPassword}
         onGenerateBriefing={generateCurrentBriefing}
+        onOpenStandup={() => setIsStandupOpen(true)}
         onResetDemo={resetDemo}
         onSelectGoal={(goal) =>
           patchState((draft) => {
@@ -485,6 +488,20 @@ export default function Home() {
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
       />
+
+      {isStandupOpen ? (
+        <DailyStandupPanel
+          state={state}
+          onClose={() => setIsStandupOpen(false)}
+          onSelectTask={(task) => {
+            patchState((draft) => {
+              draft.currentGoalId = task.goalId;
+              draft.selectedNodeId = task.id;
+            });
+            setIsStandupOpen(false);
+          }}
+        />
+      ) : null}
 
       <NodeDetailPanel
         model={model}

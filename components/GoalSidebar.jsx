@@ -24,6 +24,7 @@ export function GoalSidebar({
   onLogout,
   onPasswordChange,
   onGenerateBriefing,
+  onOpenStandup,
   onResetDemo,
   onSelectGoal,
   onSubmitAuth,
@@ -55,6 +56,9 @@ export function GoalSidebar({
       />
 
       <div className="action-stack">
+        <button className="standup-button" type="button" onClick={onOpenStandup}>
+          Daily standup
+        </button>
         <button className="primary-button" type="button" onClick={onCreateGoal}>
           Create new
         </button>
