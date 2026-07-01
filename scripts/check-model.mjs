@@ -38,6 +38,9 @@ assert.equal(createModel(state).workStatus("a"), "ongoing");
 
 const context = buildGoalContext(state, "goal");
 assert.equal(context.metrics.total, 4);
+const nextActions = generateBriefing(context, "next_actions");
+assert.doesNotMatch(nextActions, /1\.1: A/, "A completed Self task must not reappear because downstream work is open");
+assert.match(nextActions, /1\.2: B \(ongoing\)/, "B remains a next action based on its Self status");
 assert.match(generateBriefing(context, "status_mail"), /Subject: Status update - Goal/);
 assert.match(
   generateBriefing(
