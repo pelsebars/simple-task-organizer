@@ -21,6 +21,8 @@ import {
 } from "../lib/model";
 import { fallbackId, makeNode, sampleState, STORAGE_KEY } from "../lib/sampleData";
 
+const COLLAPSE_STORAGE_KEY = "simple-task-organizer:collapsed-nodes";
+
 function loadStoredState() {
   try {
     const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY));
@@ -42,6 +44,7 @@ export default function Home() {
   const [successorLinkTargetId, setSuccessorLinkTargetId] = useState("");
   const [moveMode, setMoveMode] = useState("into");
   const [moveTargetId, setMoveTargetId] = useState("");
+  const [collapsedNodeIds, setCollapsedNodeIds] = useState([]);
   const [user, setUser] = useState(null);
   const [authMode, setAuthMode] = useState("login");
   const [authEmail, setAuthEmail] = useState("");
@@ -66,6 +69,12 @@ export default function Home() {
 
   useEffect(() => {
     setState(loadStoredState());
+    try {
+      const savedCollapsed = JSON.parse(window.localStorage.getItem(COLLAPSE_STORAGE_KEY));
+      if (Array.isArray(savedCollapsed)) setCollapsedNodeIds(savedCollapsed);
+    } catch {
+      window.localStorage.removeItem(COLLAPSE_STORAGE_KEY);
+    }
     setIsReady(true);
     fetch("/api/auth/me")
       .then((response) => response.json())
@@ -77,6 +86,11 @@ export default function Home() {
     if (!isReady) return;
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [isReady, state]);
+
+  useEffect(() => {
+    if (!isReady) return;
+    window.localStorage.setItem(COLLAPSE_STORAGE_KEY, JSON.stringify(collapsedNodeIds));
+  }, [collapsedNodeIds, isReady]);
 
   useEffect(() => {
     if (!user) {
@@ -103,7 +117,8 @@ export default function Home() {
     return () => window.clearTimeout(autosaveTimerRef.current);
   }, [isReady, state, user]);
 
-  const model = useMemo(() => createModel(state), [state]);
+  const collapsedNodeIdSet = useMemo(() => new Set(collapsedNodeIds), [collapsedNodeIds]);
+  const model = useMemo(() => createModel(state, collapsedNodeIdSet), [collapsedNodeIdSet, state]);
   const selectedNode = model.selectedNode();
   const successorOptions = selectedNode ? model.successorOptions(selectedNode.id) : [];
   const outgoingSuccessors = selectedNode ? model.outgoingSuccessors(selectedNode.id) : [];
@@ -545,6 +560,34 @@ export default function Home() {
     lastPointer.current = null;
   }
 
+  function toggleCollapse(nodeId) {
+    setCollapsedNodeIds((current) => (current.includes(nodeId) ? current.filter((id) => id !== nodeId) : [...current, nodeId]));
+    if (descendantsOf(state, nodeId).has(state.selectedNodeId)) {
+      patchState((draft) => {
+        draft.selectedNodeId = nodeId;
+      });
+    }
+  }
+
+  function collapseAll() {
+    const collapsibleIds = state.nodes
+      .filter((node) => node.goalId === state.currentGoalId)
+      .filter((node) => state.nodes.some((child) => child.parentId === node.id))
+      .map((node) => node.id);
+    setCollapsedNodeIds((current) => [...new Set([...current, ...collapsibleIds])]);
+    const selected = state.nodes.find((node) => node.id === state.selectedNodeId);
+    if (selected?.parentId) {
+      patchState((draft) => {
+        draft.selectedNodeId = draft.goals.find((goal) => goal.id === draft.currentGoalId)?.rootNodeId;
+      });
+    }
+  }
+
+  function expandAll() {
+    const currentGoalNodeIds = new Set(state.nodes.filter((node) => node.goalId === state.currentGoalId).map((node) => node.id));
+    setCollapsedNodeIds((current) => current.filter((id) => !currentGoalNodeIds.has(id)));
+  }
+
   return (
     <main className="app-shell">
       <GoalSidebar
@@ -597,11 +640,14 @@ export default function Home() {
         panX={state.panX}
         panY={state.panY}
         selectedNodeId={state.selectedNodeId}
+        onCollapseAll={collapseAll}
+        onExpandAll={expandAll}
         onSelectNode={(nodeId) =>
           patchState((draft) => {
             draft.selectedNodeId = nodeId;
           })
         }
+        onToggleCollapse={toggleCollapse}
         onZoomBy={zoomBy}
         onResetView={resetView}
         onWheel={onWheel}

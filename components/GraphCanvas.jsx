@@ -1,6 +1,6 @@
 import { formatDueDate, statusLabels } from "../lib/model";
 
-export function GraphCanvas({ model, scale, panX, panY, selectedNodeId, onSelectNode, onZoomBy, onResetView, onWheel, onPointerDown, onPointerMove, onPointerUp }) {
+export function GraphCanvas({ model, scale, panX, panY, selectedNodeId, onCollapseAll, onExpandAll, onSelectNode, onToggleCollapse, onZoomBy, onResetView, onWheel, onPointerDown, onPointerMove, onPointerUp }) {
   return (
     <section className="canvas-wrap" aria-label="Goal graph">
       <div className="toolbar">
@@ -13,6 +13,12 @@ export function GraphCanvas({ model, scale, panX, panY, selectedNodeId, onSelect
         </button>
         <button type="button" onClick={onResetView}>
           Reset
+        </button>
+        <button type="button" onClick={onCollapseAll}>
+          Collapse all
+        </button>
+        <button type="button" onClick={onExpandAll}>
+          Expand all
         </button>
       </div>
 
@@ -44,30 +50,54 @@ export function GraphCanvas({ model, scale, panX, panY, selectedNodeId, onSelect
           </svg>
 
           <div className="node-layer">
-            {model.currentNodes().map((node) => {
+            {model.visibleNodes().map((node) => {
               const position = model.positionOf(node.id);
               const workStatus = model.workStatus(node.id);
               const due = model.dueState(node);
               const roleClass = model.roleClass(node);
               const warningClass = due === "soon" || due === "overdue" ? `due-${due}` : "";
+              const canCollapse = model.canCollapse(node.id);
+              const isCollapsed = model.isCollapsed(node.id);
+              const hiddenCount = model.hiddenDescendantCount(node.id);
 
               return (
-                <button
+                <div
                   className={`node ${roleClass} ${node.id === selectedNodeId ? "selected" : ""} ${warningClass}`}
                   key={node.id}
+                  role="button"
+                  tabIndex={0}
                   style={{ left: position.x, top: position.y }}
-                  type="button"
                   onClick={() => onSelectNode(node.id)}
+                  onKeyDown={(event) => {
+                    if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return;
+                    event.preventDefault();
+                    onSelectNode(node.id);
+                  }}
                 >
                   <span className="node-title">
                     {model.treeNumber(node.id)}: {node.title}
                   </span>
-                    <span className="status-stack">
-                      <StatusLine label="Self" status={node.ownStatus} />
+                  <span className="status-stack">
+                    <StatusLine label="Self" status={node.ownStatus} />
                     {workStatus ? <StatusLine label="Work" status={workStatus} /> : null}
-                    </span>
+                  </span>
                   {warningClass ? <span className="due-badge">{formatDueDate(node.dueDate)}</span> : null}
-                </button>
+                  {canCollapse ? (
+                    <button
+                      className="collapse-toggle"
+                      type="button"
+                      aria-label={`${isCollapsed ? "Expand" : "Collapse"} children of ${node.title}`}
+                      title={`${isCollapsed ? "Expand" : "Collapse"} children`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onToggleCollapse(node.id);
+                      }}
+                    >
+                      <span aria-hidden="true">{isCollapsed ? "+" : "-"}</span>
+                      {hiddenCount ? <small>{hiddenCount} hidden</small> : null}
+                    </button>
+                  ) : null}
+                </div>
               );
             })}
           </div>

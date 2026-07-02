@@ -78,6 +78,22 @@ assert.equal(moveState.nodes.find((item) => item.id === "b").parentId, "parent")
 assert.equal(moveState.successors.some((edge) => edge.sourceId === "a" && edge.targetId === "b"), true);
 assert.equal(moveState.successors.some((edge) => edge.sourceId === "b" && edge.targetId === "c"), true, "B is inserted before A's previous next step");
 
+const collapsedModel = createModel(state, new Set(["parent"]));
+assert.deepEqual(collapsedModel.visibleNodes().map((item) => item.id), ["parent"]);
+assert.equal(collapsedModel.workStatus("parent"), "ongoing", "Collapsed descendants still contribute to Work status");
+assert.equal(collapsedModel.hiddenDescendantCount("parent"), 3);
+
+const successorCollapseState = structuredClone(state);
+successorCollapseState.nodes.push(node("a-child", 6, "a", "A child", "not_started", 1, "goal"));
+const successorCollapseModel = createModel(successorCollapseState, new Set(["a"]));
+assert.equal(successorCollapseModel.visibleNodes().some((item) => item.id === "a-child"), false);
+assert.equal(successorCollapseModel.visibleNodes().some((item) => item.id === "b"), true, "A sibling successor remains visible");
+assert.equal(
+  successorCollapseModel.edges.some((edge) => edge.type === "successor" && edge.source.id === "a" && edge.target.id === "b"),
+  true,
+  "The successor edge remains visible",
+);
+
 console.log("Model checks passed");
 
 function node(id, publicId, parentId, title, ownStatus, sortOrder, goalId) {

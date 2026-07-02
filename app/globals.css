@@ -684,6 +684,35 @@ h1 {
   background: var(--node);
   box-shadow: var(--shadow);
   user-select: none;
+  cursor: pointer;
+}
+
+.collapse-toggle {
+  position: absolute;
+  z-index: 2;
+  bottom: 4px;
+  left: 6px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 1px solid #9aa8c7;
+  border-radius: 10px;
+  background: white;
+  color: #17378d;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 2px 6px rgba(24, 20, 16, 0.16);
+}
+
+.collapse-toggle small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .node-goal,
