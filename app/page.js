@@ -13,6 +13,7 @@ import {
   createModel,
   descendantsOf,
   ensureSelection,
+  moveNode as moveNodeInState,
   newNode,
   resequenceChildren,
   resequenceRootGoals,
@@ -39,6 +40,8 @@ export default function Home() {
   const [isStandupOpen, setIsStandupOpen] = useState(false);
   const [newGoalTitle, setNewGoalTitle] = useState("New goal");
   const [successorLinkTargetId, setSuccessorLinkTargetId] = useState("");
+  const [moveMode, setMoveMode] = useState("into");
+  const [moveTargetId, setMoveTargetId] = useState("");
   const [user, setUser] = useState(null);
   const [authMode, setAuthMode] = useState("login");
   const [authEmail, setAuthEmail] = useState("");
@@ -104,6 +107,20 @@ export default function Home() {
   const selectedNode = model.selectedNode();
   const successorOptions = selectedNode ? model.successorOptions(selectedNode.id) : [];
   const outgoingSuccessors = selectedNode ? model.outgoingSuccessors(selectedNode.id) : [];
+  const moveOptions = useMemo(() => {
+    if (!selectedNode || selectedNode.kind === "goal") return [];
+    const descendants = descendantsOf(state, selectedNode.id);
+    return model.currentNodes().filter((node) => {
+      if (node.id === selectedNode.id || descendants.has(node.id)) return false;
+      if (moveMode === "after") return node.kind !== "goal";
+      return node.id !== selectedNode.parentId;
+    });
+  }, [model, moveMode, selectedNode, state]);
+  const movePreview = selectedNode && moveTargetId ? buildMovePreview(state, selectedNode, moveMode, moveTargetId) : "";
+
+  useEffect(() => {
+    setMoveTargetId("");
+  }, [state.selectedNodeId, moveMode]);
 
   function patchState(updater) {
     setState((current) => {
@@ -333,6 +350,20 @@ export default function Home() {
     patchState((draft) => {
       draft.successors = draft.successors.filter((edge) => edge.sourceId !== selectedNode.id || edge.targetId !== targetId);
     });
+  }
+
+  function moveSelectedNode() {
+    if (!selectedNode || !moveTargetId) return;
+    let moved = false;
+
+    patchState((draft) => {
+      moved = moveNodeInState(draft, selectedNode.id, moveMode, moveTargetId);
+    });
+
+    if (moved) {
+      setMoveTargetId("");
+      showNotice("Node moved.");
+    }
   }
 
   function deleteSelectedNode() {
@@ -598,6 +629,10 @@ export default function Home() {
         selectedNode={selectedNode}
         selectedGoal={state.goals.find((goal) => goal.id === selectedNode?.goalId)}
         goalCount={state.goals.length}
+        moveMode={moveMode}
+        moveOptions={moveOptions}
+        movePreview={movePreview}
+        moveTargetId={moveTargetId}
         successorLinkTargetId={successorLinkTargetId}
         successorOptions={successorOptions}
         outgoingSuccessors={outgoingSuccessors}
@@ -606,6 +641,9 @@ export default function Home() {
         onDeleteGoal={deleteCurrentGoal}
         onDeleteNode={deleteSelectedNode}
         onLinkExistingSuccessor={linkExistingSuccessor}
+        onMoveModeChange={setMoveMode}
+        onMoveNode={moveSelectedNode}
+        onMoveTargetChange={setMoveTargetId}
         onRemoveSuccessor={removeSuccessor}
         onSetSuccessorLinkTargetId={setSuccessorLinkTargetId}
         onUpdateNode={updateSelectedNode}
@@ -656,4 +694,17 @@ async function readJsonResponse(response) {
   } catch {
     return { error: `Cloud storage returned an invalid response (${response.status}).` };
   }
+}
+
+function buildMovePreview(state, node, mode, targetId) {
+  const target = state.nodes.find((item) => item.id === targetId);
+  if (!target) return "";
+
+  const action = mode === "into" ? `Move "${node.title}" into "${target.title}".` : `Move "${node.title}" after "${target.title}".`;
+  const before = state.successors.filter((edge) => edge.targetId === node.id).map((edge) => state.nodes.find((item) => item.id === edge.sourceId));
+  const after = state.successors.filter((edge) => edge.sourceId === node.id).map((edge) => state.nodes.find((item) => item.id === edge.targetId));
+
+  if (before.length === 1 && after.length === 1) return `${action} The old chain will reconnect ${before[0].title} -> ${after[0].title}.`;
+  if (before.length || after.length) return `${action} Its old successor links will be reconnected where possible.`;
+  return action;
 }

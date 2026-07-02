@@ -3,6 +3,10 @@ export function NodeDetailPanel({
   selectedNode,
   selectedGoal,
   goalCount,
+  moveMode,
+  moveOptions,
+  movePreview,
+  moveTargetId,
   successorLinkTargetId,
   successorOptions,
   outgoingSuccessors,
@@ -11,6 +15,9 @@ export function NodeDetailPanel({
   onDeleteGoal,
   onDeleteNode,
   onLinkExistingSuccessor,
+  onMoveModeChange,
+  onMoveNode,
+  onMoveTargetChange,
   onRemoveSuccessor,
   onSetSuccessorLinkTargetId,
   onUpdateGoal,
@@ -110,6 +117,32 @@ export function NodeDetailPanel({
               Add successor
             </button>
           </div>
+
+          {selectedNode.kind !== "goal" ? (
+            <section className="relation-section move-section">
+              <h2>Move node</h2>
+              <div className="move-controls">
+                <label htmlFor="moveMode">Move</label>
+                <select id="moveMode" value={moveMode} onChange={(event) => onMoveModeChange(event.target.value)}>
+                  <option value="into">Into</option>
+                  <option value="after">After</option>
+                </select>
+                <label htmlFor="moveTarget">Destination</label>
+                <select id="moveTarget" value={moveTargetId} onChange={(event) => onMoveTargetChange(event.target.value)}>
+                  <option value="">Select node...</option>
+                  {moveOptions.map((node) => (
+                    <option key={node.id} value={node.id}>
+                      {model.treeNumber(node.id)}: {node.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {movePreview ? <p className="move-preview">{movePreview}</p> : null}
+              <button className="secondary-button" type="button" disabled={!moveTargetId} onClick={onMoveNode}>
+                Move node
+              </button>
+            </section>
+          ) : null}
 
           <button className="danger-button" type="button" disabled={selectedNode.kind === "goal"} onClick={onDeleteNode}>
             Delete node

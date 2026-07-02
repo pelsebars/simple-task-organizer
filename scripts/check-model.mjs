@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { buildGoalContext, generateBriefing } from "../lib/briefings.js";
-import { createModel } from "../lib/model.js";
+import { createModel, moveNode } from "../lib/model.js";
 import { buildDailyStandup } from "../lib/standup.js";
 
 const state = {
@@ -65,6 +65,18 @@ const standup = buildDailyStandup(state);
 assert.equal(standup.urgentCount, 0, "Done tasks are omitted even when due today");
 assert.deepEqual(standup.goals[0].ongoing.map((item) => item.id), ["b"]);
 assert.deepEqual(standup.goals[0].notStarted.map((item) => item.id), ["c"]);
+
+const moveState = structuredClone(state);
+moveState.nodes.push(node("branch", 5, "parent", "Branch", "not_started", 4, "goal"));
+assert.equal(moveNode(moveState, "b", "into", "branch"), true);
+assert.equal(moveState.nodes.find((item) => item.id === "b").parentId, "branch");
+assert.equal(moveState.successors.some((edge) => edge.sourceId === "a" && edge.targetId === "c"), true, "Old chain is healed");
+assert.equal(moveState.successors.some((edge) => edge.sourceId === "a" && edge.targetId === "b"), false);
+
+assert.equal(moveNode(moveState, "b", "after", "a"), true);
+assert.equal(moveState.nodes.find((item) => item.id === "b").parentId, "parent");
+assert.equal(moveState.successors.some((edge) => edge.sourceId === "a" && edge.targetId === "b"), true);
+assert.equal(moveState.successors.some((edge) => edge.sourceId === "b" && edge.targetId === "c"), true, "B is inserted before A's previous next step");
 
 console.log("Model checks passed");
 
